@@ -190,16 +190,14 @@ module Dependabot
             # module declares itself using a different name than specified in our `go.mod` etc.
             run_go_get
 
-            # If we stubbed modules, don't run `go mod {tidy,vendor}` as
-            # dependencies are incomplete
-            if substitutions.empty?
-              # go mod tidy should run before go mod vendor to ensure any
-              # dependencies removed by go mod tidy are also removed from vendors.
-              run_go_mod_tidy
-              run_go_vendor
-            else
-              substitute_all(substitutions.invert)
-            end
+            # `go mod {tidy,vendor}` as dependencies are incomplete.
+            # Instead, we un-stub them and then run `go mod {tidy,vendor}`.
+            substitute_all(substitutions.invert) unless substitutions.empty?
+
+            # go mod tidy should run before go mod vendor to ensure any
+            # dependencies removed by go mod tidy are also removed from vendors.
+            run_go_mod_tidy
+            run_go_vendor
 
             updated_go_sum = original_go_sum ? File.read("go.sum") : nil
             updated_go_mod = File.read("go.mod")
